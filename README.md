@@ -4,7 +4,7 @@
 
 ## 📄 Overview
 
-`metasploit-mastery.html` is a self-contained, interactive reference guide for learning and mastering the **Metasploit Framework** alongside **Metasploitable 2**, the intentionally vulnerable target VM. It is designed with a terminal-inspired dark interface and covers everything from initial lab setup through post-exploitation techniques — all in one offline-capable HTML file.
+`index.html` is a self-contained, interactive reference guide for learning and mastering the **Metasploit Framework** alongside **Metasploitable 2**, the intentionally vulnerable target VM. It is designed with a terminal-inspired dark interface and covers everything from initial lab setup through post-exploitation techniques — all in one offline-capable HTML file.
 
 This guide is suited for:
 
@@ -17,7 +17,7 @@ This guide is suited for:
 
 | Property | Value |
 |---|---|
-| **Filename** | `metasploit-mastery.html` |
+| **Filename** | `index.html` |
 | **Type** | Standalone HTML (no server required) |
 | **Size** | ~75 KB (single file) |
 | **Dependencies** | None — fully self-contained |
@@ -30,13 +30,13 @@ No installation is needed. Simply open the file in any modern web browser:
 
 bash
 # macOS
-open metasploit-mastery.html
+open index.html
 
 # Linux
-xdg-open metasploit-mastery.html
+xdg-open index.html
 
 # Windows
-start metasploit-mastery.html
+start index.html
 
 Or drag and drop the file directly into your browser window.
 
